@@ -33,15 +33,10 @@ AI 便會自動識別資料、進行交叉分析、繪製高解析度圖表，�
 ```text
 result-report/
 ├── data/                                             # 放置問卷 Excel（報名表、回饋表）
-│   ├── 115-1_Coffee Chill and Chat －報名表單 (回覆).xlsx
-│   ├── 115-1_Coffee Chill and Chat －回饋表單  (回覆).xlsx
-│   ├── 115-1_Idea Lab_找到值得解決的問題 －報名表單  (回覆).xlsx
-│   └── 115-1_Idea Lab_找到值得解決的問題 －回饋表單   (回覆).xlsx
 ├── output/                                           # 自動產出之 Word 結案報告 (.docx，全英文命名)
-│   ├── 115-1_Coffee_Chill_and_Chat_Report.docx
-│   └── 115-1_Idea_Lab_Report.docx
+├── template.docx                                     # 專業排版規範基底範本（含簽到名冊框線）
 ├── main.py                                           # 主執行程式（CLI 命令列入口）
-├── report_engine.py                                  # 動態分析與 Word 排版引擎
+├── report_engine.py                                  # 動態自適應分析與 Word 排版引擎
 ├── generate_charts.py                                # 高解析圖表繪製模組
 ├── requirements.txt                                  # Python 依賴清單
 ├── README.md                                         # 使用者指南
