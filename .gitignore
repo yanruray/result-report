@@ -1,0 +1,15 @@
+# Python 快取
+__pycache__/
+*.py[cod]
+
+# Office 暫存與系統檔
+*$*
+*.tmp
+.DS_Store
+Thumbs.db
+
+# 資料與產出報告目錄（僅保留空目錄結構，保護問卷個資並維持儲存庫精簡）
+data/*
+!data/.gitkeep
+output/*
+!output/.gitkeep
