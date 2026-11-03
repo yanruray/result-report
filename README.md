@@ -20,7 +20,6 @@
 result-report/
 ├── data/              # 存放問卷 Excel 檔案（報名表、回饋表）
 ├── output/            # 自動產出之 Word 結案報告 (.docx)
-├── template.docx      # 標準排版規範基底範本
 ├── main.py            # 主執行程式（CLI 入口）
 ├── report_engine.py   # 動態分析與排版引擎
 ├── generate_charts.py # 高解析圖表繪製模組

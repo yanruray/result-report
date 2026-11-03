@@ -671,23 +671,7 @@ def analyze_datasets(reg_rows, fb_rows):
 
 
 def generate_report(reg_input, fb_input, output_path=None, event_name="活動成果分析報告", event_date=None, lecturer_name="活動籌備團隊", return_data=False):
-    """泛用型動態自適應報告產出主入口（統一以 template.docx 為核心範本）"""
-    template_candidates = [
-        'template.docx',
-        os.path.join(os.path.dirname(__file__), 'template.docx'),
-        '115-1_Idea_Lab_活動成果分析報告.docx',
-        os.path.join(os.path.dirname(__file__), '115-1_Idea_Lab_活動成果分析報告.docx'),
-        'output/115-1_Idea_Lab_Report.docx',
-        os.path.join(os.path.dirname(__file__), 'output', '115-1_Idea_Lab_Report.docx'),
-    ]
-    template_path = None
-    for cand in template_candidates:
-        if os.path.exists(cand):
-            template_path = cand
-            break
-    if not template_path:
-        raise FileNotFoundError("找不到基礎範本檔案 (template.docx)！")
-
+    """泛用型動態自適應報告產出主入口（完全純 Python 動態生成，零外部範本依賴）"""
     reg_rows = read_xlsx(reg_input)
     fb_rows = read_xlsx(fb_input)
     data = analyze_datasets(reg_rows, fb_rows)
@@ -724,28 +708,37 @@ def generate_report(reg_input, fb_input, output_path=None, event_name="活動成
     draw_pie_chart(c_data, '學院分布比例', chart_c_png, width=750, height=480)
     draw_pie_chart(g_data, '年級結構比例', chart_g_png, width=750, height=480)
 
-    doc = docx.Document(template_path)
+    doc = docx.Document()
 
-    # 確保範本中所有現存節點皆設定為標準邊界 1.0 cm
-    for s in doc.sections:
-        apply_standard_margins(s)
+    # 確保 Section 0 邊界為標準 1.0 cm
+    apply_standard_margins(doc.sections[0])
 
-    # ==================== Page 1: 標題與簽到表 ====================
-    p0 = doc.paragraphs[0]
-    p0.text = display_title
-    for r in p0.runs:
-        apply_font(r, size=16.0, bold=True, color=NAVY)
+    # 頁尾
+    footer = doc.sections[0].footer
+    p_ft = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
+    p_ft.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    r_ft = p_ft.add_run(display_title)
+    apply_font(r_ft, size=8.0, color=MUTED)
 
-    # 中繼資料表格：標籤採用深石板灰 #465469 粗體，數值採用深灰 #1E293A
-    t0 = doc.tables[0]
+    # ==================== Page 1: 標題、基本資訊與簽到表 ====================
+    p0 = doc.paragraphs[0] if doc.paragraphs else doc.add_paragraph()
+    set_para_style(p0, 'Normal')
+    r0 = p0.add_run(display_title)
+    apply_font(r0, size=16.0, bold=True, color=NAVY)
+
+    # 中繼資料表格
+    t0 = doc.add_table(rows=1, cols=3)
+    t0.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t0.autofit = False
     meta_items = [
         ("活動日期", event_date),
         ("主辦項目", meta_project_name),
         ("講師", lecturer_name)
     ]
+    meta_widths = [Cm(6.0), Cm(7.0), Cm(6.0)]
     for c_i, (k, v) in enumerate(meta_items):
         c = t0.rows[0].cells[c_i]
-        c.text = ""
+        c.width = meta_widths[c_i]
         p = c.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         r_k = p.add_run(f"{k}：")
@@ -754,10 +747,47 @@ def generate_report(reg_input, fb_input, output_path=None, event_name="活動成
         apply_font(r_v, size=8.5, bold=False, color=CHARCOAL)
         set_cell_background(c, "F0F5F8")
         set_cell_margins(c, top=45, bottom=45, left=70, right=70)
+    set_table_borders(t0, color="CBD5E1", sz="4")
 
-    # 刪除 Page 1 之後所有舊內容（保留 Page 1 的 Elements 0~5 與最後的 sectPr，確保向量簽到框完好）
-    for el in list(doc._element.body[6:-1]):
-        el.getparent().remove(el)
+    # 活動簽到表標題
+    p_sign_h = doc.add_paragraph()
+    set_para_style(p_sign_h, 'Heading2')
+    r_sh = p_sign_h.add_run("【活動簽到表】")
+    apply_font(r_sh, size=11.0, bold=True, color=NAVY)
+
+    # 簽到表貼附框線表格 (滿版高度框線，預留貼附處)
+    sign_table = doc.add_table(rows=1, cols=1)
+    sign_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    sign_table.autofit = False
+    sign_cell = sign_table.cell(0, 0)
+    sign_cell.width = Cm(19.0)
+    set_cell_background(sign_cell, "F8F9FB")
+    set_cell_margins(sign_cell, top=180, bottom=180, left=100, right=100)
+
+    tblPr = sign_table._tbl.tblPr
+    borders = parse_xml(f'''
+        <w:tblBorders {nsdecls("w")}>
+            <w:top w:val="single" w:sz="6" w:space="0" w:color="CAD4E0"/>
+            <w:bottom w:val="single" w:sz="6" w:space="0" w:color="CAD4E0"/>
+            <w:left w:val="single" w:sz="6" w:space="0" w:color="CAD4E0"/>
+            <w:right w:val="single" w:sz="6" w:space="0" w:color="CAD4E0"/>
+        </w:tblBorders>
+    ''')
+    tblPr.append(borders)
+
+    trPr = sign_table.rows[0]._tr.get_or_add_trPr()
+    trHeight = parse_xml(f'<w:trHeight {nsdecls("w")} w:val="10200" w:hRule="atLeast"/>')
+    trPr.append(trHeight)
+
+    p_sign = sign_cell.paragraphs[0]
+    p_sign.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_sign1 = p_sign.add_run("〔 活動簽到名冊 貼附處 〕\n\n")
+    apply_font(r_sign1, size=11.5, bold=True, color=NAVY)
+    r_sign2 = p_sign.add_run("（請直接將活動當日簽到表照片或掃描檔案貼於此處框線內）")
+    apply_font(r_sign2, size=9.0, bold=False, color=MUTED)
+
+    # Section Break to Page 2
+    add_sec(doc)
 
     # ==================== Page 2: 執行摘要、KPI、出席、背景與動機 ====================
     add_h2(doc, "【執行摘要 Executive Summary】")
