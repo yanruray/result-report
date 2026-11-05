@@ -91,9 +91,9 @@ python main.py --list
 | `generate_event_report` | 分析指定課程資料並產出 Word 結報 | `course_name` (必填)<br>`event_date` (選填)<br>`lecturer` (選填)<br>`custom_output_filename` (選填) |
 | `generate_all_reports` | 一鍵產出所有偵測到的課程結案報告 | 無 |
 
-#### ⚙️ 客戶端設定教學
+#### ⚙️ 各大 AI 客戶端設定教學
 
-##### 1. Claude Desktop
+##### 1. Claude (Claude Desktop)
 在 Claude Desktop 設定檔（Windows: `%APPDATA%\Claude\claude_desktop_config.json`，macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`）中加入本伺服器：
 
 ```json
@@ -111,9 +111,40 @@ python main.py --list
   }
 }
 ```
-> 💡 *請將路徑替換為您本機中 `mcp_server.py` 的絕對路徑。若使用虛擬環境，請將 `command` 指向虛擬環境的 `python` 執行檔。*
+> 💡 *請將路徑替換為您本機中 `mcp_server.py` 的絕對路徑。重啟 Claude Desktop 後即可在輸入框右下角看到可用的結報工具。*
 
-##### 2. Cursor
+##### 2. Antigravity
+Google Antigravity 原生支援 MCP 協定，可透過設定檔或圖形介面配置：
+- **設定檔方式**：開啟或建立全域設定檔 `~/.gemini/config/mcp_config.json`（Windows 路徑為 `C:\Users\<使用者名稱>\.gemini\config\mcp_config.json`），加入以下設定：
+
+```json
+{
+  "mcpServers": {
+    "event-report-generator": {
+      "command": "python",
+      "args": [
+        "c:/path/to/result-report/mcp_server.py"
+      ],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+- **介面確認**：設定完成後，在 Antigravity 點選右上角 **更多選項 (...) > MCP Servers** 即可確認工具是否在線；或直接在聊天中請 AI 協助產出結報。
+
+##### 3. GPT (ChatGPT / OpenAI)
+ChatGPT 目前主要透過遠端 HTTPS / SSE 協定與 MCP 或外接工具通訊（ChatGPT Web/Desktop 未直接支援本機 stdio 進程）：
+- **連接步驟**：
+  1. **建立公開隧道**：使用隧道工具（如 `ngrok`）將本機服務映射為公開 HTTPS 網址：
+     ```bash
+     ngrok http 8000
+     ```
+  2. **在 ChatGPT 中新增**：進入 ChatGPT 設定 > **Security and login** 開啟 **Developer mode**（需具備 Plus / Team / Enterprise 等開發者權限），前往 **Plugins / MCP Servers** 點選新增，貼上隧道提供的 HTTPS 網址。
+  3. **Agent 框架介接**：若使用 OpenAI SDK、OpenAI Swarm 或 LangChain 等 Python Agent 框架，亦可直接使用 stdio 方式執行 `python mcp_server.py` 載入工具。
+
+##### 4. Cursor / 其他 IDE (Windsurf, Zed)
 1. 開啟 Cursor，進入 **Settings** > **Features** > **MCP**。
 2. 點選 **+ Add New MCP Server**。
 3. 填寫設定：
